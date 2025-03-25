@@ -21,7 +21,7 @@ pipeline {
 
         stage('Push Docker Image') {
             steps {
-                sh 'echo $DOCKER_ACCESS_KEY | docker login -u your-dockerhub-username --password-stdin'
+                sh 'echo $DOCKER_HUB_TOKEN | docker login -u your-dockerhub-username --password-stdin'
                 sh 'docker push your-dockerhub-username/app'
             }
         }
@@ -31,7 +31,7 @@ pipeline {
                 branch 'main'
             }
             steps {
-                withCredentials([aws(credentialsId: 'AWS_CREDENTIALS')]) {
+                withCredentials([aws(credentialsId: 'AWS-DOCKER-CREDENTIALS')]) {
                     sh 'terraform init'
                     sh 'terraform apply -auto-approve'
                 }
