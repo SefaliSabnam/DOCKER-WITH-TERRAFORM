@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         AWS_CREDENTIALS = credentials('AWS-DOCKER-CREDENTIALS') // Stores both Access & Secret Key
-        DOCKER_ACCESS_KEY = credentials('DOCKER_ACCESS_KEY') // Stores Docker Personal Access Token
+        DOCKER_ACCESS_KEY = credentials('DOCKER_HUB_TOKEN') // Stores Docker Personal Access Token
     }
 
     stages {
