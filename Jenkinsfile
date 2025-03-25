@@ -2,8 +2,7 @@ pipeline {
     agent any
 
     environment {
-        AWS_CREDENTIALS = credentials('AWS-DOCKER-CREDENTIALS') // Stores both Access & Secret Key
-        DOCKER_ACCESS_KEY = credentials('DOCKER_HUB_TOKEN') // Stores Docker Personal Access Token
+        AWS_CREDENTIALS = credentials('AWS-DOCKER-CREDENTIALS') // Stores AWS Access & Secret Key
     }
 
     stages {
@@ -15,14 +14,18 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t your-dockerhub-username/app .'
+                sh 'docker build -t sefali26/app:latest .'
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                sh 'echo $DOCKER_HUB_TOKEN | docker login -u your-dockerhub-username --password-stdin'
-                sh 'docker push your-dockerhub-username/app'
+                withCredentials([string(credentialsId: 'DOCKER_HUB_TOKEN', variable: 'DOCKER_ACCESS_KEY')]) {
+                    sh '''
+                    echo $DOCKER_ACCESS_KEY | docker login -u sefali26 --password-stdin
+                    docker push sefali26/app:latest
+                    '''
+                }
             }
         }
 
@@ -31,9 +34,11 @@ pipeline {
                 branch 'main'
             }
             steps {
-                withCredentials([aws(credentialsId: 'AWS-DOCKER-CREDENTIALS')]) {
-                    sh 'terraform init'
-                    sh 'terraform apply -auto-approve'
+                withAWS(credentials: 'AWS-DOCKER-CREDENTIALS', region: 'ap-south-1') {
+                    sh '''
+                    terraform init
+                    terraform apply -auto-approve
+                    '''
                 }
             }
         }
