@@ -11,26 +11,26 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 script {
-                    echo "Checking out branch: ${env.BRANCH_NAME}"
                     checkout([$class: 'GitSCM', 
                         branches: [[name: '*/${BRANCH_NAME}']], 
+                        extensions: [[$class: 'CleanBeforeCheckout'], [$class: 'WipeWorkspace']],
                         userRemoteConfigs: [[url: 'https://github.com/SefaliSabnam/DOCKER-WITH-TERRAFORM.git']]
                     ])
                 }
             }
         }
 
-        stage('Lint & Test') {
+        stage('Verify Dockerfile') {
             steps {
                 script {
-                    sh "echo 'Running lint & tests...'"
+                    sh "ls -l"  // Check if Dockerfile exists
                 }
             }
         }
 
         stage('Build Docker Image') {
             when {
-                branch 'main' // Build only after merge
+                branch 'main'  // Build only after merge
             }
             steps {
                 script {
