@@ -2,72 +2,62 @@ pipeline {
     agent any
 
     environment {
-        AWS_CREDENTIALS = credentials('AWS-DOCKER-CREDENTIALS') // AWS Access & Secret Key
+        DOCKER_HUB_USER = 'sefali26'
+        IMAGE_NAME = 'sefali26/my-website'
+        IMAGE_TAG = 'latest'
+        AWS_ACCESS_KEY_ID = credentials('AWS-DOCKER-CREDENTIALS')
     }
 
     stages {
-        stage('Clone Repository') {
+        stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/SefaliSabnam/DOCKER-WITH-TERRAFORM.git'
+                git 'https://github.com/SefaliSabnam/DOCKER-WITH-TERRAFORM.git' // Replace with your repo URL
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh '''
-                    echo "Building Docker Image..."
-                    docker build -t sefali26/app:latest .
-                    '''
+                    sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
                 }
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Login to Docker Hub') {
             steps {
-                withCredentials([string(credentialsId: 'DOCKER_HUB_TOKEN', variable: 'DOCKER_ACCESS_KEY')]) {
-                    script {
-                        sh '''
-                        echo "Logging in to Docker Hub..."
-                        echo $DOCKER_ACCESS_KEY | docker login -u sefali26 --password-stdin
-                        
-                        echo "Pushing Docker Image..."
-                        docker push sefali26/app:latest
-                        '''
+                script {
+                    withCredentials([string(credentialsId: 'DOCKER_HUB_TOKEN', variable: 'DOCKER_TOKEN')]) {
+                        sh "echo $DOCKER_TOKEN | docker login -u ${DOCKER_HUB_USER} --password-stdin"
                     }
                 }
             }
         }
 
-        stage('Deploy to AWS') {
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+                }
+            }
+        }
+
+        stage('Terraform Init & Apply') {
             when {
-                branch 'main'
+                branch 'main'  // Runs only if merged into 'main'
             }
             steps {
-                withAWS(credentials: 'AWS-DOCKER-CREDENTIALS', region: 'ap-south-1') {
-                    script {
-                        sh '''
-                        echo "Initializing Terraform..."
-                        terraform init -backend=true
-
-                        echo "Applying Terraform configuration..."
-                        terraform apply -auto-approve
-                        '''
-                    }
+                script {
+                    sh """
+                    terraform init
+                    terraform apply -auto-approve
+                    """
                 }
             }
         }
-    }
 
-    post {
-        failure {
-            script {
-                echo "Build failed! Check the logs for errors."
-            }
-        }
-        success {
-            script {
-                echo "Build and deployment successful!"
+        stage('Cleanup') {
+            steps {
+                sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG}"
             }
         }
     }
