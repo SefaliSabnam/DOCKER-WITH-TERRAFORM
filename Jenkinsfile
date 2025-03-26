@@ -5,6 +5,7 @@ pipeline {
         DOCKER_HUB_USER = 'sefali26'
         IMAGE_NAME = 'sefali26/my-website'
         IMAGE_TAG = 'latest'
+        AWS_ACCESS_KEY_ID = credentials('AWS-DOCKER-CREDENTIALS') // AWS Credentials
     }
 
     stages {
@@ -20,17 +21,17 @@ pipeline {
             }
         }
 
-        stage('Verify Dockerfile') {
+        stage('Verify Files') {
             steps {
                 script {
-                    sh "ls -l"  // Check if Dockerfile exists
+                    sh "ls -l"  // Check if index.html & Dockerfile exist
                 }
             }
         }
 
         stage('Build Docker Image') {
             when {
-                branch 'main'  // Build only after merge
+                branch 'main'  // Only run after merge to main
             }
             steps {
                 script {
@@ -63,23 +64,29 @@ pipeline {
             }
         }
 
-        stage('Terraform Init & Apply') {
+        stage('Terraform Init') {
+            steps {
+                script {
+                    sh "terraform init"
+                }
+            }
+        }
+
+        stage('Terraform Plan') {
+            steps {
+                script {
+                    sh "terraform plan -out=tfplan"
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
             when {
-                branch 'main'
+                branch 'main'  // Apply only after merge to main
             }
             steps {
                 script {
-                    withCredentials([
-                        string(credentialsId: 'AWS_ACCESS_KEY_ID_1', variable: 'AWS_ACCESS_KEY'),
-                        string(credentialsId: 'AWS_SECRET_ACCESS_KEY_1', variable: 'AWS_SECRET_KEY')
-                    ]) {
-                        sh """
-                        export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY
-                        export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_KEY
-                        terraform init
-                        terraform apply -auto-approve
-                        """
-                    }
+                    sh "terraform apply -auto-approve tfplan"
                 }
             }
         }
